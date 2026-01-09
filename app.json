@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "Irrigação Automática",
+    "slug": "irrigacao-automatica",
+    "version": "1.0.0",
+    "sdkVersion": "54.0.0",
+    "scheme": "irrigacao-automatica",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTabletMode": true,
+      "buildNumber": "1"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "versionCode": 1
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Roboto-Regular.ttf",
+            "./assets/fonts/Roboto-Bold.ttf"
+          ]
+        }
+      ]
+    ]
+  }
+}
