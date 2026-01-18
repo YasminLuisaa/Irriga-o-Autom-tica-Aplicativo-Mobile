@@ -1,310 +1,234 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   SafeAreaView,
   Dimensions,
+  FlatList,
+  ActivityIndicator,
+  RefreshControl,
   TouchableOpacity,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LineChart } from 'react-native-chart-kit';
 import Header from '../components/Header';
-import ConnectionStatus from '../components/ConnectionStatus';
-import { HelpTooltip, HelpModal } from '../components/Help';
-import { showToast } from '../components/Toast';
 import { COLORS, SIZES, SHADOWS } from '../styles/theme';
+import { showToast } from '../components/Toast';
 
-const screenWidth = Dimensions.get('window').width;
+// Firebase desabilitado - dados locais apenas
+
+const { width } = Dimensions.get('window');
 
 const HistoricoScreen = () => {
-  const [filtro, setFiltro] = useState('24h');
-  const [connectionStatus, setConnectionStatus] = useState('connected');
-  const [helpVisible, setHelpVisible] = useState(false);
+  const [historico, setHistorico] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [filtroTipo, setFiltroTipo] = useState('todos'); // 'todos', 'sensor', 'bomba'
 
-  // Dados simulados de umidade ao longo do tempo
-  const dados = {
-    '24h': {
-      labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
-      datasets: [
-        {
-          data: [45, 50, 65, 70, 65, 55],
-          strokeWidth: 3,
-          color: () => COLORS.primary,
-          fillShadowGradient: COLORS.success,
-          fillShadowGradientOpacity: 0.3,
-        },
-      ],
-      stats: { max: 75, min: 45, media: 59, irrigacoes: 3 },
-    },
-    'semana': {
-      labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'],
-      datasets: [
-        {
-          data: [55, 62, 58, 68, 72, 65],
-          strokeWidth: 3,
-          color: () => COLORS.primary,
-          fillShadowGradient: COLORS.success,
-          fillShadowGradientOpacity: 0.3,
-        },
-      ],
-      stats: { max: 78, min: 42, media: 63, irrigacoes: 12 },
-    },
-    'mes': {
-      labels: ['Sem1', 'Sem2', 'Sem3', 'Sem4'],
-      datasets: [
-        {
-          data: [60, 65, 62, 70],
-          strokeWidth: 3,
-          color: () => COLORS.primary,
-          fillShadowGradient: COLORS.success,
-          fillShadowGradientOpacity: 0.3,
-        },
-      ],
-      stats: { max: 82, min: 40, media: 65, irrigacoes: 45 },
-    },
+  useEffect(() => {
+    carregarHistorico();
+  }, []);
+
+  const carregarHistorico = () => {
+    setLoading(true);
+    try {
+      // Sem dados do Firebase - array vazio
+      setHistorico([]);
+      setLoading(false);
+      setRefreshing(false);
+    } catch (error) {
+      console.error('Erro ao carregar histórico:', error);
+      showToast('❌ Histórico não disponível', 'info');
+      setLoading(false);
+    }
   };
 
-  const chartData = dados[filtro];
-  const stats = chartData.stats;
+  const onRefresh = async () => {
+    setRefreshing(true);
+    carregarHistorico();
+  };
+
+  const historicoFiltrado = historico.filter((item) => {
+    if (filtroTipo === 'todos') return true;
+    return item.tipo === filtroTipo;
+  });
+
+  const formatarData = (timestamp) => {
+    const data = new Date(timestamp);
+    return data.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  };
+
+  const renderizarItemSensor = (item) => (
+    <View style={[styles.itemCard, { ...SHADOWS.light }]}>
+      <View style={styles.itemHeader}>
+        <View style={[styles.iconBox, { backgroundColor: COLORS.primaryLight }]}>
+          <MaterialCommunityIcons
+            name="water-percent"
+            size={24}
+            color={COLORS.primary}
+          />
+        </View>
+        <View style={styles.itemInfo}>
+          <Text style={styles.itemTitle}>Leitura de Sensores</Text>
+          <Text style={styles.itemTime}>{formatarData(item.timestamp)}</Text>
+        </View>
+      </View>
+
+      <View style={styles.itemContent}>
+        <View style={styles.sensorRow}>
+          <Text style={styles.sensorLabel}>Sensor 1:</Text>
+          <Text style={[styles.sensorValue, { color: item.sensor1 >= 60 ? COLORS.success : item.sensor1 >= 40 ? COLORS.warning : COLORS.danger }]}>
+            {item.sensor1}%
+          </Text>
+        </View>
+        <View style={styles.sensorRow}>
+          <Text style={styles.sensorLabel}>Sensor 2:</Text>
+          <Text style={[styles.sensorValue, { color: item.sensor2 >= 60 ? COLORS.success : item.sensor2 >= 40 ? COLORS.warning : COLORS.danger }]}>
+            {item.sensor2}%
+          </Text>
+        </View>
+        <View style={styles.sensorRow}>
+          <Text style={styles.sensorLabel}>Sensor 3:</Text>
+          <Text style={[styles.sensorValue, { color: item.sensor3 >= 60 ? COLORS.success : item.sensor3 >= 40 ? COLORS.warning : COLORS.danger }]}>
+            {item.sensor3}%
+          </Text>
+        </View>
+        <View style={[styles.sensorRow, { borderTopWidth: 1, borderTopColor: COLORS.lightGray, paddingTop: 8, marginTop: 8 }]}>
+          <Text style={styles.sensorLabel}>Média:</Text>
+          <Text style={[styles.sensorValue, { fontWeight: 'bold', color: item.media >= 60 ? COLORS.success : item.media >= 40 ? COLORS.warning : COLORS.danger }]}>
+            {item.media}%
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderizarItemBomba = (item) => (
+    <View style={[styles.itemCard, { ...SHADOWS.light }]}>
+      <View style={styles.itemHeader}>
+        <View style={[styles.iconBox, { backgroundColor: item.ligada ? COLORS.dangerLight : COLORS.successLight }]}>
+          <MaterialCommunityIcons
+            name="pump"
+            size={24}
+            color={item.ligada ? COLORS.danger : COLORS.success}
+          />
+        </View>
+        <View style={styles.itemInfo}>
+          <Text style={styles.itemTitle}>
+            Bomba {item.ligada ? 'Ligada' : 'Desligada'}
+          </Text>
+          <Text style={styles.itemTime}>{formatarData(item.timestamp)}</Text>
+        </View>
+        <View style={[styles.badge, { backgroundColor: item.ligada ? COLORS.danger : COLORS.success }]}>
+          <Text style={styles.badgeText}>
+            {item.ligada ? 'ON' : 'OFF'}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderItem = ({ item }) => {
+    if (item.tipo === 'sensor') {
+      return renderizarItemSensor(item);
+    } else if (item.tipo === 'bomba') {
+      return renderizarItemBomba(item);
+    }
+    return null;
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Carregando histórico...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <Header 
-          title="Histórico de Umidade 📊" 
-          subtitle="Análise da tendência"
-        />
-
-        {/* Indicador de Status de Conexão */}
-        <ConnectionStatus status={connectionStatus} />
-
-        {/* Botões de Filtro */}
-        <View style={styles.filterSection}>
-          <View style={styles.filterTitleContainer}>
-            <Text style={styles.filterTitle}>Período</Text>
-            <HelpTooltip text="Selecione um período para visualizar os dados históricos. Cada período mostra estatísticas diferentes." />
-          </View>
-          <View style={styles.filterButtons}>
-            <TouchableOpacity
-              style={[
-                styles.filterButton,
-                filtro === '24h' && styles.filterButtonActive,
-              ]}
-              onPress={() => setFiltro('24h')}
-            >
-              <MaterialCommunityIcons
-                name="clock-outline"
-                size={16}
-                color={filtro === '24h' ? COLORS.white : COLORS.textLight}
-              />
-              <Text
-                style={[
-                  styles.filterButtonText,
-                  filtro === '24h' && styles.filterButtonTextActive,
-                ]}
-              >
-                Últimas 24h
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.filterButton,
-                filtro === 'semana' && styles.filterButtonActive,
-              ]}
-              onPress={() => setFiltro('semana')}
-            >
-              <MaterialCommunityIcons
-                name="calendar-week"
-                size={16}
-                color={filtro === 'semana' ? COLORS.white : COLORS.textLight}
-              />
-              <Text
-                style={[
-                  styles.filterButtonText,
-                  filtro === 'semana' && styles.filterButtonTextActive,
-                ]}
-              >
-                Última Semana
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.filterButton,
-                filtro === 'mes' && styles.filterButtonActive,
-              ]}
-              onPress={() => setFiltro('mes')}
-            >
-              <MaterialCommunityIcons
-                name="calendar-month"
-                size={16}
-                color={filtro === 'mes' ? COLORS.white : COLORS.textLight}
-              />
-              <Text
-                style={[
-                  styles.filterButtonText,
-                  filtro === 'mes' && styles.filterButtonTextActive,
-                ]}
-              >
-                Último Mês
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Gráfico */}
-        <View style={[styles.chartContainer, { ...SHADOWS.light }]}>
-          <Text style={styles.chartTitle}>Variação da Umidade do Solo</Text>
-          <LineChart
-            data={chartData}
-            width={screenWidth - SIZES.baseSpacing * 2}
-            height={220}
-            chartConfig={{
-              backgroundColor: COLORS.white,
-              backgroundGradientFrom: COLORS.white,
-              backgroundGradientTo: COLORS.white,
-              color: () => COLORS.primary,
-              labelColor: () => COLORS.textLight,
-              style: {
-                borderRadius: SIZES.borderRadius,
-              },
-              propsForDots: {
-                r: '5',
-                strokeWidth: '2',
-                stroke: COLORS.primary,
-              },
-            }}
-            bezier
-            style={styles.chart}
-          />
-          <View style={styles.legendContainer}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: COLORS.primary }]} />
-              <Text style={styles.legendText}>Umidade do Solo</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Estatísticas */}
-        <View style={styles.statsSection}>
-          <Text style={styles.statsTitle}>Estatísticas do Período</Text>
-
-          <View style={[styles.statsGrid, { ...SHADOWS.light }]}>
-            <View style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: COLORS.successLight }]}>
-                <MaterialCommunityIcons
-                  name="arrow-top-right"
-                  size={20}
-                  color={COLORS.success}
-                />
-              </View>
-              <Text style={styles.statLabel}>Máxima</Text>
-              <Text style={[styles.statValue, { color: COLORS.success }]}>
-                {stats.max}%
-              </Text>
-            </View>
-
-            <View style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: COLORS.dangerLight }]}>
-                <MaterialCommunityIcons
-                  name="arrow-bottom-left"
-                  size={20}
-                  color={COLORS.danger}
-                />
-              </View>
-              <Text style={styles.statLabel}>Mínima</Text>
-              <Text style={[styles.statValue, { color: COLORS.danger }]}>
-                {stats.min}%
-              </Text>
-            </View>
-
-            <View style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: COLORS.primaryLight }]}>
-                <MaterialCommunityIcons
-                  name="chart-line"
-                  size={20}
-                  color={COLORS.primary}
-                />
-              </View>
-              <Text style={styles.statLabel}>Média</Text>
-              <Text style={[styles.statValue, { color: COLORS.primary }]}>
-                {stats.media}%
-              </Text>
-            </View>
-
-            <View style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: '#E8F5E9' }]}>
-                <MaterialCommunityIcons
-                  name="water-check"
-                  size={20}
-                  color={COLORS.success}
-                />
-              </View>
-              <Text style={styles.statLabel}>Irrigações</Text>
-              <Text style={[styles.statValue, { color: COLORS.success }]}>
-                {stats.irrigacoes}x
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Nota */}
-        <View style={[styles.noteBox, { ...SHADOWS.light }]}>
-          <View style={styles.noteHeader}>
-            <MaterialCommunityIcons
-              name="lightbulb-on"
-              size={20}
-              color={COLORS.warning}
+      <FlatList
+        data={historicoFiltrado}
+        renderItem={renderItem}
+        keyExtractor={(item, index) => index.toString()}
+        contentContainerStyle={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        ListHeaderComponent={
+          <>
+            <Header
+              title="Histórico de Eventos 📋"
+              subtitle="Todas as ações registradas"
             />
-            <Text style={styles.noteTitle}>Dica</Text>
-          </View>
-          <Text style={styles.noteText}>
-            Monitore as tendências de umidade para ajustar melhor o intervalo de irrigação. Máximas próximas a 80% indicam solo bem hidratado.
-          </Text>
-        </View>
-      </ScrollView>
 
-      {/* Help Modal */}
-      <HelpModal
-        visible={helpVisible}
-        onClose={() => setHelpVisible(false)}
-        title="Ajuda - Histórico"
-        sections={[
-          {
-            icon: 'chart-line',
-            title: 'Gráfico de Umidade',
-            description: 'O gráfico mostra a evolução da umidade ao longo do tempo.',
-            tips: [
-              'Linha azul = umidade do solo',
-              'Quanto maior o valor, mais úmido o solo',
-              'Picos para baixo indicam períodos secos',
-            ],
-          },
-          {
-            icon: 'information',
-            title: 'Estatísticas',
-            description: 'Resumo dos valores de umidade no período selecionado.',
-            tips: [
-              'Máxima: pico mais alto de umidade',
-              'Mínima: valor mais baixo registrado',
-              'Média: valor médio do período',
-              'Irrigações: quantas vezes a bomba ligou',
-            ],
-          },
-          {
-            icon: 'alert-circle',
-            title: 'Como Interpretar?',
-            description: 'Entenda melhor os dados para melhorar a irrigação.',
-            tips: [
-              'Se máxima está abaixo de 60%, aumente a frequência de irrigação',
-              'Se mínima está acima de 70%, diminua a frequência',
-              'Valores estáveis indicam um bom sistema de irrigação',
-            ],
-          },
-        ]}
+            {/* Filtros */}
+            <View style={styles.filterContainer}>
+              <View style={styles.filterButtons}>
+                {[
+                  { id: 'todos', label: 'Todos', icon: 'all-inclusive' },
+                  { id: 'sensor', label: 'Sensores', icon: 'water' },
+                  { id: 'bomba', label: 'Bomba', icon: 'pump' },
+                ].map((filtro) => (
+                  <TouchableOpacity
+                    key={filtro.id}
+                    style={[
+                      styles.filterButton,
+                      filtroTipo === filtro.id && styles.filterButtonActive,
+                    ]}
+                    onPress={() => setFiltroTipo(filtro.id)}
+                  >
+                    <MaterialCommunityIcons
+                      name={filtro.icon}
+                      size={16}
+                      color={
+                        filtroTipo === filtro.id ? COLORS.white : COLORS.primary
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.filterButtonText,
+                        filtroTipo === filtro.id && styles.filterButtonTextActive,
+                      ]}
+                    >
+                      {filtro.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Info */}
+            <View style={[styles.infoBox, { ...SHADOWS.light }]}>
+              <MaterialCommunityIcons
+                name="information"
+                size={20}
+                color={COLORS.primary}
+              />
+              <Text style={styles.infoText}>
+                Total de {historicoFiltrado.length} evento(s)
+              </Text>
+            </View>
+          </>
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <MaterialCommunityIcons
+              name="inbox"
+              size={60}
+              color={COLORS.lightGray}
+            />
+            <Text style={styles.emptyText}>Nenhum evento registrado</Text>
+          </View>
+        }
+        showsVerticalScrollIndicator={false}
       />
     </SafeAreaView>
   );
@@ -316,156 +240,133 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   container: {
-    paddingBottom: SIZES.baseSpacing * 2,
+    padding: SIZES.padding,
+    paddingBottom: 24,
   },
-  filterSection: {
-    marginHorizontal: SIZES.baseSpacing,
-    marginVertical: SIZES.baseSpacing,
-  },
-  filterTitleContainer: {
-    flexDirection: 'row',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: SIZES.sm,
-    marginBottom: SIZES.baseSpacing / 2,
   },
-  filterTitle: {
+  loadingText: {
+    marginTop: 12,
     fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
+    color: COLORS.secondary,
+  },
+  filterContainer: {
+    marginVertical: 16,
   },
   filterButtons: {
     flexDirection: 'row',
-    gap: SIZES.baseSpacing / 2,
+    gap: 8,
   },
   filterButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: SIZES.baseSpacing / 2,
-    paddingHorizontal: SIZES.baseSpacing / 2,
-    borderRadius: SIZES.borderRadiusSmall,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.primary,
+    borderRadius: SIZES.radius - 2,
     backgroundColor: COLORS.white,
-    gap: SIZES.xs,
+    gap: 4,
   },
   filterButtonActive: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
   },
   filterButtonText: {
-    fontSize: SIZES.fontSize.xs,
-    fontWeight: '500',
-    color: COLORS.textLight,
+    fontSize: 12,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   filterButtonTextActive: {
     color: COLORS.white,
-    fontWeight: '600',
   },
-  chartContainer: {
-    backgroundColor: COLORS.white,
-    borderRadius: SIZES.borderRadius,
-    marginHorizontal: SIZES.baseSpacing,
-    marginVertical: SIZES.baseSpacing,
-    padding: SIZES.baseSpacing,
-  },
-  chartTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: SIZES.baseSpacing,
-  },
-  chart: {
-    borderRadius: SIZES.borderRadius,
-    marginVertical: SIZES.baseSpacing / 2,
-  },
-  legendContainer: {
-    marginTop: SIZES.baseSpacing / 2,
-    paddingTop: SIZES.baseSpacing / 2,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  legendItem: {
+  infoBox: {
     flexDirection: 'row',
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: SIZES.radius,
+    padding: 12,
     alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
   },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: SIZES.baseSpacing / 2,
-  },
-  legendText: {
-    fontSize: SIZES.fontSize.sm,
-    color: COLORS.textLight,
+  infoText: {
+    fontSize: 12,
+    color: COLORS.primary,
     fontWeight: '500',
   },
-  statsSection: {
-    marginHorizontal: SIZES.baseSpacing,
-    marginVertical: SIZES.baseSpacing,
-  },
-  statsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: SIZES.baseSpacing,
-  },
-  statsGrid: {
+  itemCard: {
     backgroundColor: COLORS.white,
-    borderRadius: SIZES.borderRadius,
-    padding: SIZES.baseSpacing,
+    borderRadius: SIZES.radius,
+    padding: SIZES.padding,
+    marginBottom: 12,
+  },
+  itemHeader: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SIZES.baseSpacing / 2,
-  },
-  statCard: {
-    width: '48%',
     alignItems: 'center',
-    paddingVertical: SIZES.baseSpacing / 2,
+    gap: 12,
   },
-  statIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: SIZES.borderRadiusSmall,
+  iconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: SIZES.baseSpacing / 2,
   },
-  statLabel: {
-    fontSize: SIZES.fontSize.sm,
-    color: COLORS.textLight,
-    marginBottom: SIZES.xs,
+  itemInfo: {
+    flex: 1,
   },
-  statValue: {
-    fontSize: SIZES.fontSize.xl,
-    fontWeight: '700',
-  },
-  noteBox: {
-    backgroundColor: COLORS.white,
-    borderRadius: SIZES.borderRadius,
-    marginHorizontal: SIZES.baseSpacing,
-    marginVertical: SIZES.baseSpacing,
-    padding: SIZES.baseSpacing,
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.warning,
-  },
-  noteHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SIZES.baseSpacing / 2,
-  },
-  noteTitle: {
+  itemTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: 'bold',
     color: COLORS.text,
-    marginLeft: SIZES.baseSpacing / 2,
   },
-  noteText: {
-    fontSize: 13,
-    color: COLORS.textLight,
-    lineHeight: 20,
+  itemTime: {
+    fontSize: 12,
+    color: COLORS.secondary,
+    marginTop: 2,
+  },
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: COLORS.white,
+  },
+  itemContent: {
+    marginTop: 12,
+  },
+  sensorRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  sensorLabel: {
+    fontSize: 12,
+    color: COLORS.secondary,
     fontWeight: '500',
+  },
+  sensorValue: {
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: COLORS.secondary,
+    marginTop: 12,
   },
 });
 

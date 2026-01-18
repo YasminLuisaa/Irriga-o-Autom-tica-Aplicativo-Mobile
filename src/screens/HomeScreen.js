@@ -5,50 +5,100 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   Dimensions,
-  LinearGradient,
+  RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Header from '../components/Header';
+import ScreenHeader from '../components/ScreenHeader';
 import ConfirmDialog from '../components/ConfirmDialog';
 import ConnectionStatus from '../components/ConnectionStatus';
 import { HelpTooltip } from '../components/Help';
 import { showToast } from '../components/Toast';
 import { COLORS, SIZES, SHADOWS } from '../styles/theme';
+import api from '../services/api';
+import { useApp } from '../contexts/AppContext';
+
+// Firebase desabilitado
+
+let notificarSoloSeco, notificarSoloUmido, notificarBombaAcionada;
+try {
+  const notificationService = require('../services/notificationService');
+  notificarSoloSeco = notificationService.notificarSoloSeco;
+  notificarSoloUmido = notificationService.notificarSoloUmido;
+  notificarBombaAcionada = notificationService.notificarBombaAcionada;
+} catch (error) {
+  console.warn('Notification service not available:', error.message);
+  notificarSoloSeco = async () => console.log('Notificações não configuradas');
+  notificarSoloUmido = async () => console.log('Notificações não configuradas');
+  notificarBombaAcionada = async () => console.log('Notificações não configuradas');
+}
 
 const { width } = Dimensions.get('window');
 
-const HomeScreen = () => {
-  const [bombaLigada, setBombaLigada] = useState(false);
-  const [media, setMedia] = useState(65);
-  const [statusSolo, setStatusSolo] = useState(media >= 50 ? 'ÚMIDO' : 'SECO');
-  const [ultimaAtualizacao, setUltimaAtualizacao] = useState(new Date());
+const HomeScreen = ({ navigation }) => {
+  const {
+    sensor1,
+    sensor2,
+    sensor3,
+    media,
+    mediaPercent,
+    bombaLigada,
+    modoAutomatico,
+    toggleBomba,
+    connectionStatus,
+    lastUpdate,
+    loading,
+    luminosity,
+  } = useApp();
+
   const [confirmVisible, setConfirmVisible] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState('connected');
+  const [refreshing, setRefreshing] = useState(false);
+  const [statusAnterior, setStatusAnterior] = useState('UMIDO');
+
+  // Função para determinar status segundo tabela de referência
+  const determinarStatusDetalhado = (percentual) => {
+    if (percentual >= 80) return { texto: 'Encharcado', emoji: '💦' };
+    if (percentual >= 60) return { texto: 'Úmido', emoji: '✅' };
+    if (percentual >= 40) return { texto: 'Quase seco', emoji: '⚠️' };
+    if (percentual >= 20) return { texto: 'Seco', emoji: '❌' };
+    return { texto: 'Muito seco', emoji: '🔴' };
+  };
+
+  // Refresh manual
+  const onRefresh = async () => {
+    setRefreshing(true);
+    // O AppContext já busca dados automaticamente a cada 3 segundos
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setRefreshing(false);
+  };
 
   const handleToggleBomba = () => {
     setConfirmVisible(true);
   };
 
-  const confirmToggleBomba = () => {
+  const confirmToggleBomba = async () => {
     setConfirmVisible(false);
-    setBombaLigada(!bombaLigada);
-    const novoEstado = !bombaLigada;
-    showToast(
-      novoEstado ? '💧 Bomba ligada com sucesso!' : '🛑 Bomba desligada',
-      novoEstado ? 'success' : 'info',
-      3000
-    );
+    try {
+      const novoEstado = !bombaLigada;
+      const sucesso = await toggleBomba(novoEstado);
+      
+      if (sucesso) {
+        showToast(
+          novoEstado ? '💧 Bomba ligada com sucesso!' : '🛑 Bomba desligada',
+          novoEstado ? 'success' : 'info',
+          3000
+        );
+        console.log(`✅ Bomba ${novoEstado ? 'LIGADA' : 'DESLIGADA'}`);
+      } else {
+        showToast('❌ Erro ao controlar bomba', 'error');
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+      showToast('❌ Erro ao controlar bomba', 'error');
+    }
   };
-
-  // Atualizar hora a cada minuto
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setUltimaAtualizacao(new Date());
-    }, 60000);
-    return () => clearInterval(timer);
-  }, []);
 
   const formatarHora = (data) => {
     const horas = String(data.getHours()).padStart(2, '0');
@@ -60,16 +110,21 @@ const HomeScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+      <ScreenHeader currentScreen="HomeTab" navigation={navigation} />
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         <Header 
           title="Irrigação Automática 🌿" 
-          subtitle="Monitoramento do Solo"
+          subtitle="Monitoramento em Tempo Real"
         />
 
-        {/* Indicador de Status de Conexão */}
         <ConnectionStatus status={connectionStatus} />
 
-        {/* Card de Umidade */}
         <View style={[styles.card, styles.umidadeCard, { ...SHADOWS.medium }]}>
           <View style={styles.umidadeContent}>
             <View style={[styles.iconCircle, { backgroundColor: COLORS.primaryLight }]}>
@@ -81,21 +136,20 @@ const HomeScreen = () => {
             </View>
             <View style={styles.labelWithHelp}>
               <Text style={styles.label}>Umidade Média</Text>
-              <HelpTooltip text="Percentual médio de umidade do solo. Acima de 50% é considerado úmido." />
+              <HelpTooltip text="Percentual médio de umidade do solo em tempo real." />
             </View>
             <View style={styles.valueContainer}>
-              <Text style={styles.value}>{media}</Text>
+              <Text style={styles.value}>{Math.round(media)}</Text>
               <Text style={styles.valueUnit}>%</Text>
             </View>
           </View>
         </View>
 
-        {/* Card de Status */}
         <View
           style={[
             styles.card,
             {
-              backgroundColor: statusSolo === 'ÚMIDO' ? COLORS.success : COLORS.danger,
+              backgroundColor: media >= 60 ? COLORS.success : media >= 40 ? COLORS.warning : COLORS.danger,
               ...SHADOWS.medium,
             },
           ]}
@@ -103,22 +157,29 @@ const HomeScreen = () => {
           <View style={styles.statusContent}>
             <View style={[styles.iconCircle, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
               <MaterialCommunityIcons
-                name={statusSolo === 'ÚMIDO' ? 'leaf' : 'leaf-off'}
+                name={media >= 60 ? 'leaf' : media >= 40 ? 'alert' : 'leaf-off'}
                 size={44}
                 color={COLORS.white}
               />
             </View>
             <Text style={styles.statusLabel}>Status do Solo</Text>
-            <Text style={styles.statusValue}>{statusSolo}</Text>
+            <Text style={styles.statusValue}>{determinarStatusDetalhado(media).emoji} {determinarStatusDetalhado(media).texto}</Text>
           </View>
         </View>
 
-        {/* Seção de Controle */}
         <View style={styles.controlSection}>
           <View style={styles.controlTitleContainer}>
             <Text style={styles.controlTitle}>Controle da Bomba</Text>
-            <HelpTooltip text="Toque no botão para ligar ou desligar a bomba de irrigação. Uma confirmação será solicitada." />
+            <HelpTooltip text="Controle manual da bomba. Desativa o modo automático." />
           </View>
+          
+          {!modoAutomatico && (
+            <View style={styles.modoManualBanner}>
+              <MaterialCommunityIcons name="hand-back-right" size={16} color={COLORS.warning} />
+              <Text style={styles.modoManualText}>Modo Manual Ativo</Text>
+            </View>
+          )}
+
           <TouchableOpacity
             style={[
               styles.bombaButton,
@@ -145,7 +206,6 @@ const HomeScreen = () => {
           </Text>
         </View>
 
-        {/* Informações Gerais */}
         <View style={styles.infoSection}>
           <Text style={styles.sectionTitle}>Sensores Adicionais</Text>
           
@@ -174,14 +234,13 @@ const HomeScreen = () => {
             </View>
             <View style={styles.infoText}>
               <Text style={styles.infoLabel}>Luminosidade</Text>
-              <Text style={styles.infoValue}>75%</Text>
+              <Text style={styles.infoValue}>{Math.round(luminosity)}%</Text>
             </View>
-            <Text style={styles.infoStatus}>Ótimo</Text>
+            <Text style={styles.infoStatus}>{luminosity > 70 ? 'Ótimo' : luminosity > 40 ? 'Bom' : 'Baixo'}</Text>
           </View>
         </View>
       </ScrollView>
 
-      {/* Rodapé com Última Atualização */}
       <View style={styles.footer}>
         <MaterialCommunityIcons
           name="history"
@@ -189,11 +248,10 @@ const HomeScreen = () => {
           color={COLORS.textLight}
         />
         <Text style={styles.footerText}>
-          Última atualização: {formatarHora(ultimaAtualizacao)}
+          Última atualização: {formatarHora(lastUpdate)}
         </Text>
       </View>
 
-      {/* Diálogo de Confirmação */}
       <ConfirmDialog
         visible={confirmVisible}
         title={bombaLigada ? 'Desligar Bomba?' : 'Ligar Bomba?'}
@@ -206,7 +264,7 @@ const HomeScreen = () => {
         cancelText="Cancelar"
         onConfirm={confirmToggleBomba}
         onCancel={() => setConfirmVisible(false)}
-        isDangerous={bombaLigada}
+        destructive={bombaLigada}
         icon={bombaLigada ? 'alert-circle' : 'water'}
       />
     </SafeAreaView>
@@ -304,6 +362,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: SIZES.sm,
+  },
+  modoManualBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.warningLight,
+    paddingVertical: SIZES.sm,
+    paddingHorizontal: SIZES.md,
+    borderRadius: SIZES.borderRadiusSmall,
+    marginBottom: SIZES.md,
+    gap: SIZES.sm,
+  },
+  modoManualText: {
+    fontSize: SIZES.fontSize.sm,
+    color: COLORS.warning,
+    fontWeight: '600',
   },
   bombaButton: {
     borderRadius: SIZES.borderRadius,

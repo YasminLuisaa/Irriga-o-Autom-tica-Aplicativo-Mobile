@@ -18,34 +18,35 @@ import ConnectionStatus from '../components/ConnectionStatus';
 import { HelpTooltip, HelpModal } from '../components/Help';
 import { showToast } from '../components/Toast';
 import { COLORS, SIZES, SHADOWS } from '../styles/theme';
+import { useApp } from '../contexts/AppContext';
 
 const ConfigScreen = () => {
-  const [nomeDispositivo, setNomeDispositivo] = useState('Estufa 1');
-  const [modoAutomatico, setModoAutomatico] = useState(true);
-  const [intervaloLeitura, setIntervaloLeitura] = useState('30');
+  const {
+    limiteSeco,
+    intervaloLeitura,
+    nomeDispositivo,
+    connectionStatus,
+    atualizarConfig,
+  } = useApp();
+
+  const [nome, setNome] = useState(nomeDispositivo);
+  const [limite, setLimite] = useState(String(limiteSeco));
+  const [intervalo, setIntervalo] = useState(String(intervaloLeitura));
   const [alertasSonoros, setAlertasSonoros] = useState(true);
-  const [limiteMinimo, setLimiteMinimo] = useState('40');
-  const [limiteMaximo, setLimiteMaximo] = useState('75');
-  const [connectionStatus, setConnectionStatus] = useState('connected');
   const [helpVisible, setHelpVisible] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [nomeErro, setNomeErro] = useState(null);
   const [limiteErro, setLimiteErro] = useState(null);
 
-  const validateLimites = (min, max) => {
-    const minVal = parseInt(min);
-    const maxVal = parseInt(max);
+  const validateLimite = (limiteValue) => {
+    const limVal = parseInt(limiteValue);
     
-    if (isNaN(minVal) || isNaN(maxVal)) {
-      setLimiteErro('Valores devem ser numéricos');
+    if (isNaN(limVal)) {
+      setLimiteErro('Valor deve ser numérico');
       return false;
     }
-    if (minVal < 0 || maxVal > 100) {
-      setLimiteErro('Valores devem estar entre 0 e 100%');
-      return false;
-    }
-    if (minVal >= maxVal) {
-      setLimiteErro('Mínimo deve ser menor que o máximo');
+    if (limVal < 0 || limVal > 100) {
+      setLimiteErro('Valor deve estar entre 0 e 100%');
       return false;
     }
     setLimiteErro(null);
@@ -53,20 +54,29 @@ const ConfigScreen = () => {
   };
 
   const handleSaveConfig = () => {
-    if (!nomeDispositivo.trim()) {
+    if (!nome.trim()) {
       showToast('Nome do dispositivo não pode estar vazio', 'error');
       return;
     }
-    if (!validateLimites(limiteMinimo, limiteMaximo)) {
-      showToast('Verifique os limites de umidade', 'error');
+    if (!validateLimite(limite)) {
+      showToast('Verifique o limite de umidade', 'error');
       return;
     }
     setConfirmVisible(true);
   };
 
-  const confirmSaveConfig = () => {
+  const confirmSaveConfig = async () => {
     setConfirmVisible(false);
-    showToast('✓ Configurações salvas com sucesso!', 'success', 3000);
+    try {
+      await atualizarConfig({
+        nomeDispositivo: nome,
+        limiteSeco: parseInt(limite),
+        intervaloLeitura: parseInt(intervalo),
+      });
+      showToast('✓ Configurações salvas com sucesso!', 'success', 3000);
+    } catch (error) {
+      showToast('❌ Erro ao salvar configurações', 'error');
+    }
   };
 
   return (
@@ -101,9 +111,9 @@ const ConfigScreen = () => {
                 styles.input,
                 nomeErro && { borderColor: COLORS.danger, borderWidth: 1 }
               ]}
-              value={nomeDispositivo}
+              value={nome}
               onChangeText={(text) => {
-                setNomeDispositivo(text);
+                setNome(text);
                 setNomeErro(text.trim() ? null : 'Nome não pode estar vazio');
               }}
               placeholder="Ex: Estufa 1"
@@ -138,7 +148,7 @@ const ConfigScreen = () => {
               <View style={styles.switchTextContainer}>
                 <View style={styles.modeBadge}>
                   <Text style={styles.modeBadgeText}>
-                    {modoAutomatico ? '🔵' : '🔴'}
+                    🔵
                   </Text>
                 </View>
                 <View>
@@ -149,29 +159,14 @@ const ConfigScreen = () => {
                 </View>
               </View>
               <Switch
-                value={modoAutomatico}
-                onValueChange={setModoAutomatico}
+                value={true}
+                onValueChange={() => {}}
                 trackColor={{ false: COLORS.border, true: COLORS.success }}
                 thumbColor={COLORS.white}
+                disabled={true}
               />
             </View>
           </View>
-
-          {!modoAutomatico && (
-            <View style={[styles.card, { ...SHADOWS.light, backgroundColor: COLORS.dangerLight }]}>
-              <View style={styles.manualModeInfo}>
-                <MaterialCommunityIcons
-                  name="lock-open"
-                  size={20}
-                  color={COLORS.danger}
-                  style={{ marginRight: SIZES.baseSpacing / 2 }}
-                />
-                <Text style={[styles.manualModeText, { color: COLORS.danger }]}>
-                  Modo Manual ativado - Você pode controlar a bomba manualmente
-                </Text>
-              </View>
-            </View>
-          )}
         </View>
 
         {/* Seção: Alertas Sonoros */}
@@ -235,14 +230,14 @@ const ConfigScreen = () => {
                   key={valor}
                   style={[
                     styles.intervalButton,
-                    intervaloLeitura === valor && styles.intervalButtonActive,
+                    intervalo === valor && styles.intervalButtonActive,
                   ]}
-                  onPress={() => setIntervaloLeitura(valor)}
+                  onPress={() => setIntervalo(valor)}
                 >
                   <Text
                     style={[
                       styles.intervalButtonText,
-                      intervaloLeitura === valor && styles.intervalButtonTextActive,
+                      intervalo === valor && styles.intervalButtonTextActive,
                     ]}
                   >
                     {valor}s
@@ -266,8 +261,8 @@ const ConfigScreen = () => {
                 color={COLORS.success}
               />
             </View>
-            <Text style={styles.sectionTitle}>Limites de Umidade</Text>
-            <HelpTooltip text="Defina os limites mínimo e máximo para controlar automaticamente quando a bomba liga e desliga." />
+            <Text style={styles.sectionTitle}>Limite de Umidade</Text>
+            <HelpTooltip text="Defina o limite para controlar automaticamente quando a bomba liga (percentual mínimo)." />
           </View>
 
           {limiteErro && (
@@ -281,17 +276,17 @@ const ConfigScreen = () => {
             <View style={styles.limitItem}>
               <View>
                 <Text style={styles.limitLabel}>Limite Mínimo</Text>
-                <Text style={styles.limitDescription}>Bomba liga automaticamente</Text>
+                <Text style={styles.limitDescription}>Bomba liga quando umidade cai abaixo deste valor</Text>
               </View>
               <TextInput
                 style={[
                   styles.limitInput,
                   limiteErro && { borderColor: COLORS.danger, borderWidth: 1 }
                 ]}
-                value={limiteMinimo}
+                value={limite}
                 onChangeText={(text) => {
-                  setLimiteMinimo(text);
-                  validateLimites(text, limiteMaximo);
+                  setLimite(text);
+                  validateLimite(text);
                 }}
                 placeholder="40"
                 placeholderTextColor={COLORS.border}
@@ -302,29 +297,10 @@ const ConfigScreen = () => {
             </View>
           </View>
 
-          <View style={[styles.card, { ...SHADOWS.light }]}>
-            <View style={styles.limitItem}>
-              <View>
-                <Text style={styles.limitLabel}>Limite Máximo</Text>
-                <Text style={styles.limitDescription}>Bomba desliga automaticamente</Text>
-              </View>
-              <TextInput
-                style={[
-                  styles.limitInput,
-                  limiteErro && { borderColor: COLORS.danger, borderWidth: 1 }
-                ]}
-                value={limiteMaximo}
-                onChangeText={(text) => {
-                  setLimiteMaximo(text);
-                  validateLimites(limiteMinimo, text);
-                }}
-                placeholder="75"
-                placeholderTextColor={COLORS.border}
-                keyboardType="numeric"
-                maxLength={3}
-              />
-              <Text style={styles.limitUnit}>%</Text>
-            </View>
+          <View style={[styles.card, { backgroundColor: COLORS.primaryLight, ...SHADOWS.light }]}>
+            <Text style={[styles.hint, { color: COLORS.primary }]}>
+              💡 Exemplo: Se configurar 40%, a bomba ligará quando a umidade cair abaixo de 40% e desligará quando atingir ~70%
+            </Text>
           </View>
         </View>
 

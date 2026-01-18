@@ -25,10 +25,10 @@ const ConfirmDialog = ({
   destructive = false,
 }) => {
   const getIconColor = () => {
-    if (destructive) return COLORS.error;
+    if (destructive) return COLORS.danger;
     switch (type) {
       case 'error':
-        return COLORS.error;
+        return COLORS.danger;
       case 'success':
         return COLORS.success;
       case 'info':
@@ -39,7 +39,7 @@ const ConfirmDialog = ({
   };
 
   const getConfirmButtonColor = () => {
-    return destructive ? COLORS.error : COLORS.primary;
+    return destructive ? COLORS.danger : COLORS.primary;
   };
 
   return (
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   },
   title: {
     ...FONTS.h3,
-    color: COLORS.textDark,
+    color: COLORS.text,
     marginBottom: SIZES.sm,
     textAlign: 'center',
   },
@@ -147,13 +147,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: COLORS.border,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   cancelButtonText: {
     ...FONTS.button,
-    color: COLORS.textDark,
+    color: COLORS.text,
   },
   confirmButton: {
     backgroundColor: COLORS.primary,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,47 +6,79 @@ import {
   ScrollView,
   SafeAreaView,
   Dimensions,
+  RefreshControl,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import SensorCard from '../components/SensorCard';
 import Header from '../components/Header';
 import ConnectionStatus from '../components/ConnectionStatus';
 import { HelpTooltip, HelpModal } from '../components/Help';
+import { showToast } from '../components/Toast';
 import { COLORS, SIZES, SHADOWS } from '../styles/theme';
+import api from '../services/api';
+import { useApp } from '../contexts/AppContext';
 
 const { width } = Dimensions.get('window');
 
 const SensoresScreen = () => {
-  const [sensors, setSensors] = useState([
-    { id: 1, name: 'Sensor 1 - Vaso 1 🌱', value: 75, status: 'ÚMIDO' },
-    { id: 2, name: 'Sensor 2 - Vaso 2 🌱', value: 45, status: 'SECO' },
-    { id: 3, name: 'Sensor 3 - Vaso 3 🌱', value: 65, status: 'ÚMIDO' },
-  ]);
-  const [connectionStatus, setConnectionStatus] = useState('connected');
+  const {
+    sensor1,
+    sensor2,
+    sensor3,
+    mediaPercent,
+    connectionStatus,
+  } = useApp();
+
   const [helpVisible, setHelpVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Simular atualização de sensores periodicamente
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setSensors(prevSensors =>
-        prevSensors.map(sensor => ({
-          ...sensor,
-          value: Math.max(0, Math.min(100, sensor.value + (Math.random() - 0.5) * 10)),
-          status: sensor.value >= 50 ? 'ÚMIDO' : 'SECO',
-        }))
-      );
-    }, 5000); // Atualizar a cada 5 segundos
+  // Função para determinar status segundo tabela de referência
+  // 80-100%: Encharcado | 60-79%: Úmido | 40-59%: Quase seco | 20-39%: Seco | 0-19%: Muito seco
+  const determinarStatus = (percentual) => {
+    if (percentual >= 80) return 'Encharcado';
+    if (percentual >= 60) return 'Úmido';
+    if (percentual >= 40) return 'Quase seco';
+    if (percentual >= 20) return 'Seco';
+    return 'Muito seco';
+  };
 
-    return () => clearInterval(interval);
-  }, []);
+  // Função para determinar cor baseada em percentual
+  const getCor = (percentual) => {
+    if (percentual >= 60) return COLORS.success;      // Verde - Úmido
+    if (percentual >= 40) return COLORS.warning;      // Laranja - Quase seco
+    return COLORS.danger;                              // Vermelho - Seco
+  };
 
-  // Calcular média
-  const media = Math.round(sensors.reduce((acc, sensor) => acc + sensor.value, 0) / sensors.length);
-  const mediaStatus = media >= 50 ? 'ÚMIDO' : 'SECO';
+  const getCorLight = (percentual) => {
+    if (percentual >= 60) return COLORS.successLight;
+    if (percentual >= 40) return COLORS.warningLight;
+    return COLORS.dangerLight;
+  };
+
+  // Buscar dados do ESP32
+  const buscarDados = async () => {
+    // O AppContext já busca dados automaticamente a cada 3 segundos
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  };
+
+  // Refresh manual
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await buscarDados();
+    setRefreshing(false);
+  };
+
+  // Nota: media vem diretamente do ESP32 (dados.mediaPercent)
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.container} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         <Header 
           title="Sensores de Umidade 💧" 
           subtitle="Monitoramento em tempo real"
@@ -54,66 +86,170 @@ const SensoresScreen = () => {
 
         {/* Indicador de Status de Conexão */}
         <ConnectionStatus status={connectionStatus} />
-        <View style={styles.sensorsGrid}>
-          {sensors.map((sensor) => (
-            <View key={sensor.id} style={styles.sensorWrapper}>
-              <View 
+
+        {/* Sensor 1 */}
+        <View style={[
+          styles.sensorCard,
+          { 
+            borderLeftWidth: 4,
+            borderLeftColor: getCor(sensor1),
+            ...SHADOWS.light 
+          }
+        ]}>
+          <View style={styles.sensorHeader}>
+            <View 
+              style={[
+                styles.sensorIcon, 
+                { 
+                  backgroundColor: getCorLight(sensor1)
+                }
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="water"
+                size={32}
+                color={getCor(sensor1)}
+              />
+            </View>
+            <View style={styles.sensorInfo}>
+              <Text style={styles.sensorName}>Sensor 1 - Vaso 1 🌱</Text>
+              <Text 
                 style={[
-                  styles.sensorCard,
-                  { 
-                    borderLeftWidth: 4,
-                    borderLeftColor: sensor.status === 'ÚMIDO' ? COLORS.success : COLORS.danger,
-                    ...SHADOWS.light 
-                  }
+                  styles.sensorStatus,
+                  { color: getCor(sensor1) }
                 ]}
               >
-                <View style={styles.sensorHeader}>
-                  <View 
-                    style={[
-                      styles.sensorIcon, 
-                      { 
-                        backgroundColor: sensor.status === 'ÚMIDO' ? COLORS.successLight : COLORS.dangerLight 
-                      }
-                    ]}
-                  >
-                    <MaterialCommunityIcons
-                      name="water"
-                      size={32}
-                      color={sensor.status === 'ÚMIDO' ? COLORS.success : COLORS.danger}
-                    />
-                  </View>
-                  <View style={styles.sensorInfo}>
-                    <Text style={styles.sensorName}>{sensor.name}</Text>
-                    <Text 
-                      style={[
-                        styles.sensorStatus,
-                        { color: sensor.status === 'ÚMIDO' ? COLORS.success : COLORS.danger }
-                      ]}
-                    >
-                      {sensor.status === 'ÚMIDO' ? '✓ Úmido' : '⚠ Seco'}
-                    </Text>
-                  </View>
-                </View>
-                
-                <View style={styles.sensorValue}>
-                  <Text style={styles.sensorValueText}>{Math.round(sensor.value)}</Text>
-                  <Text style={styles.sensorValueUnit}>%</Text>
-                </View>
-
-                <View style={styles.sensorBar}>
-                  <View
-                    style={[
-                      styles.sensorProgress,
-                      { 
-                        width: `${sensor.value}%`,
-                        backgroundColor: sensor.status === 'ÚMIDO' ? COLORS.success : COLORS.danger
-                      }
-                    ]}
-                  />
-                </View>
-              </View>
+                {determinarStatus(sensor1)}
+              </Text>
             </View>
-          ))}
+          </View>
+          
+          <View style={styles.sensorValue}>
+            <Text style={styles.sensorValueText}>{sensor1}</Text>
+            <Text style={styles.sensorValueUnit}>%</Text>
+          </View>
+
+          <View style={styles.sensorBar}>
+            <View
+              style={[
+                styles.sensorProgress,
+                { 
+                  width: `${sensor1}%`,
+                  backgroundColor: getCor(sensor1)
+                }
+              ]}
+            />
+          </View>
+        </View>
+
+        {/* Sensor 2 */}
+        <View style={[
+          styles.sensorCard,
+          { 
+            borderLeftWidth: 4,
+            borderLeftColor: getCor(sensor2),
+            ...SHADOWS.light 
+          }
+        ]}>
+          <View style={styles.sensorHeader}>
+            <View 
+              style={[
+                styles.sensorIcon, 
+                { 
+                  backgroundColor: getCorLight(sensor2)
+                }
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="water"
+                size={32}
+                color={getCor(sensor2)}
+              />
+            </View>
+            <View style={styles.sensorInfo}>
+              <Text style={styles.sensorName}>Sensor 2 - Vaso 2 🌱</Text>
+              <Text 
+                style={[
+                  styles.sensorStatus,
+                  { color: getCor(sensor2) }
+                ]}
+              >
+                {determinarStatus(sensor2)}
+              </Text>
+            </View>
+          </View>
+          
+          <View style={styles.sensorValue}>
+            <Text style={styles.sensorValueText}>{sensor2}</Text>
+            <Text style={styles.sensorValueUnit}>%</Text>
+          </View>
+
+          <View style={styles.sensorBar}>
+            <View
+              style={[
+                styles.sensorProgress,
+                { 
+                  width: `${sensor2}%`,
+                  backgroundColor: getCor(sensor2)
+                }
+              ]}
+            />
+          </View>
+        </View>
+
+        {/* Sensor 3 */}
+        <View style={[
+          styles.sensorCard,
+          { 
+            borderLeftWidth: 4,
+            borderLeftColor: getCor(sensor3),
+            ...SHADOWS.light 
+          }
+        ]}>
+          <View style={styles.sensorHeader}>
+            <View 
+              style={[
+                styles.sensorIcon, 
+                { 
+                  backgroundColor: getCorLight(sensor3)
+                }
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="water"
+                size={32}
+                color={getCor(sensor3)}
+              />
+            </View>
+            <View style={styles.sensorInfo}>
+              <Text style={styles.sensorName}>Sensor 3 - Vaso 3 🌱</Text>
+              <Text 
+                style={[
+                  styles.sensorStatus,
+                  { color: getCor(sensor3) }
+                ]}
+              >
+                {determinarStatus(sensor3)}
+              </Text>
+            </View>
+          </View>
+          
+          <View style={styles.sensorValue}>
+            <Text style={styles.sensorValueText}>{sensor3}</Text>
+            <Text style={styles.sensorValueUnit}>%</Text>
+          </View>
+
+          <View style={styles.sensorBar}>
+            <View
+              style={[
+                styles.sensorProgress,
+                { 
+                  width: `${sensor3}%`,
+                  backgroundColor: getCor(sensor3)
+                }
+              ]}
+            />
+          </View>
         </View>
 
         {/* Card de Média Geral */}
@@ -131,16 +267,16 @@ const SensoresScreen = () => {
               <Text 
                 style={[
                   styles.averageStatus,
-                  { color: mediaStatus === 'ÚMIDO' ? COLORS.success : COLORS.danger }
+                  { color: mediaPercent >= 60 ? COLORS.success : mediaPercent >= 40 ? COLORS.warning : COLORS.danger }
                 ]}
               >
-                {mediaStatus === 'ÚMIDO' ? '✓ Úmido' : '⚠ Seco'}
+                {determinarStatus(mediaPercent)}
               </Text>
             </View>
           </View>
           
           <View style={styles.averageValue}>
-            <Text style={styles.averageValueText}>{media}%</Text>
+            <Text style={styles.averageValueText}>{mediaPercent}%</Text>
           </View>
 
           <View style={styles.averageBar}>
@@ -148,8 +284,8 @@ const SensoresScreen = () => {
               style={[
                 styles.averageProgress,
                 { 
-                  width: `${media}%`,
-                  backgroundColor: mediaStatus === 'ÚMIDO' ? COLORS.success : COLORS.danger
+                  width: `${mediaPercent}%`,
+                  backgroundColor: mediaPercent >= 60 ? COLORS.success : mediaPercent >= 40 ? COLORS.warning : COLORS.danger
                 }
               ]}
             />
@@ -168,7 +304,7 @@ const SensoresScreen = () => {
             <HelpTooltip text="Use as legendas para entender o status dos sensores. Verde = úmido (bom), Vermelho = seco (precisa regar)." />
           </View>
           <Text style={styles.infoText}>
-            {'\n🟢 Verde:'} Solo úmido (ideal para irrigação){'\n'}
+            {'\n🟢 Verde:'} Solo úmido (não necessita de irrigação){'\n'}
             {'\n🔴 Vermelho:'} Solo seco (necessita irrigação){'\n'}
             {'\nOs valores são atualizados a cada 5 segundos'}
           </Text>
@@ -235,6 +371,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderRadius: SIZES.borderRadius,
     padding: SIZES.baseSpacing,
+    marginHorizontal: SIZES.baseSpacing,
+    marginVertical: SIZES.baseSpacing / 2,
     ...SHADOWS.light,
   },
   sensorHeader: {
@@ -266,7 +404,7 @@ const styles = StyleSheet.create({
   sensorValue: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginBottom: SIZES.baseSpacing,
+    marginBottom: SIZES.baseSpacing / 2,
   },
   sensorValueText: {
     fontSize: 36,
@@ -279,6 +417,12 @@ const styles = StyleSheet.create({
     color: COLORS.textLight,
     marginLeft: SIZES.xs,
     fontWeight: '600',
+  },
+  rawValue: {
+    fontSize: SIZES.fontSize.xs,
+    color: COLORS.textLight,
+    marginBottom: SIZES.baseSpacing / 2,
+    fontStyle: 'italic',
   },
   sensorBar: {
     height: 8,
