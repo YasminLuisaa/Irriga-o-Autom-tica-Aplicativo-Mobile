@@ -8,14 +8,10 @@ import { StatusBar } from 'expo-status-bar';
 import { registrarNotificacoes, setupNotificationListener } from './src/services/notificationService';
 
 // Telas
-import AuthScreen from './src/screens/AuthScreen';
 import SplashScreen from './src/screens/SplashScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import SensoresScreen from './src/screens/SensoresScreen';
-import HistoricoScreen from './src/screens/HistoricoScreen';
 import ConfigScreen from './src/screens/ConfigScreen';
-import ProfileScreen from './src/screens/ProfileScreen';
-import TestConnectionScreen from './src/screens/TestConnectionScreen';
 
 // Componentes
 import Toast from './src/components/Toast';
@@ -86,14 +82,6 @@ function AppNavigator({ onLogout }) {
         }}
       />
       <Stack.Screen 
-        name="HistoricoTab"
-        component={HistoricoScreen}
-        options={{ 
-          title: 'Histórico',
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen 
         name="ConfigTab"
         component={ConfigScreen}
         options={{ 
@@ -103,19 +91,20 @@ function AppNavigator({ onLogout }) {
       />
       <Stack.Screen 
         name="ProfileTab"
-        component={(props) => <ProfileScreen {...props} onLogout={onLogout} />}
         options={{ 
           title: 'Perfil',
           headerShown: false,
         }}
-      />
+      >
+        {(props) => <ProfileScreen {...props} onLogout={onLogout} />}
+      </Stack.Screen>
     </Stack.Navigator>
   );
 }
 
 // App Principal
 export default function App() {
-  const [user, setUser] = useState(null);
+  const user = { name: 'Usuario Local' }; // Mock user
   const [loading, setLoading] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
 
@@ -134,8 +123,6 @@ export default function App() {
     // Define status bar Android
     RNStatusBar.setBarStyle('light-content');
     RNStatusBar.setBackgroundColor(COLORS.primary);
-
-    return () => {};
   }, []);
 
   if (showSplash) {
@@ -148,19 +135,6 @@ export default function App() {
     );
   }
 
-  if (loading) {
-    return (
-      <NavigationContainer>
-        <Stack.Navigator screenOptions={defaultScreenOptions}>
-          <Stack.Screen
-            name="Loading"
-            component={LoadingScreen}
-          />
-        </Stack.Navigator>
-      </NavigationContainer>
-    );
-  }
-
   return (
     <ErrorBoundary>
       <AppProvider>
@@ -168,15 +142,14 @@ export default function App() {
           <StatusBar barStyle="light-content" translucent />
           {user ? (
             <>
-              <AppNavigator onLogout={() => setUser(null)} />
+              <AppNavigator onLogout={() => {
+                /* setUser(null); */
+              }} />
               <Toast />
             </>
           ) : (
             <Stack.Navigator screenOptions={defaultScreenOptions}>
-              <Stack.Screen
-                name="Auth"
-                component={(props) => <AuthScreen {...props} onLoginSuccess={() => setUser({ name: 'Usuário Local' })} />}
-              />
+              {/* Auth removed - using local user */}
             </Stack.Navigator>
           )}
         </NavigationContainer>

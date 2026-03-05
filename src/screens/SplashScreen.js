@@ -1,126 +1,201 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS, SIZES } from '../styles/theme';
+import React, { useEffect, useRef } from "react";
+import { View, Text, StyleSheet, Animated, Easing } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { COLORS, SIZES } from "../styles/theme";
 
 const SplashScreen = ({ onFinish }) => {
+
+  const fade = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.6)).current;
+  const progress = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
-    // Animar durante 2.5 segundos antes de ir para a próxima tela
-    const timer = setTimeout(onFinish, 2500);
+
+    Animated.parallel([
+      Animated.timing(fade, {
+        toValue: 1,
+        duration: 1200,
+        easing: Easing.out(Easing.exp),
+        useNativeDriver: true,
+      }),
+
+      Animated.spring(scale, {
+        toValue: 1,
+        friction: 4,
+        tension: 80,
+        useNativeDriver: true,
+      }),
+
+      Animated.timing(progress, {
+        toValue: 1,
+        duration: 2400,
+        easing: Easing.linear,
+        useNativeDriver: false,
+      }),
+    ]).start();
+
+    const timer = setTimeout(onFinish, 2600);
     return () => clearTimeout(timer);
-  }, [onFinish]);
+
+  }, []);
+
+  const progressWidth = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0%", "70%"],
+  });
 
   return (
-    <View style={styles.container}>
-      {/* Gradiente de fundo */}
-      <View style={styles.background} />
-      
-      {/* Logo com animação */}
-      <View style={styles.logoContainer}>
+
+    <LinearGradient
+      colors={["#0f2027", "#203a43", "#2c5364"]}
+      style={styles.container}
+    >
+
+      <Animated.View
+        style={[
+          styles.logoContainer,
+          {
+            opacity: fade,
+            transform: [{ scale }],
+          },
+        ]}
+      >
         <View style={styles.logoCircle}>
           <MaterialCommunityIcons
             name="water-percent"
-            size={80}
-            color={COLORS.primary}
+            size={90}
+            color="#00E0FF"
           />
         </View>
+      </Animated.View>
+
+      <Animated.View style={{ opacity: fade }}>
+
+        <Text style={styles.title}>
+          IFSP Irrigação
+        </Text>
+
+        <Text style={styles.subtitle}>
+          Campus Birigui
+        </Text>
+
+        <Text style={styles.tagline}>
+          Sistema Inteligente de Irrigação Automática
+        </Text>
+
+      </Animated.View>
+
+      <View style={styles.loadingArea}>
+
+        <View style={styles.loadingTrack}>
+          <Animated.View
+            style={[
+              styles.loadingBar,
+              { width: progressWidth }
+            ]}
+          />
+        </View>
+
+        <Text style={styles.loadingText}>
+          Inicializando sensores...
+        </Text>
+
       </View>
 
-      {/* Texto principal */}
-      <Text style={styles.appName}>IFSP Irrigação</Text>
-      <Text style={styles.appSubtitle}>Birigui</Text>
+      <Text style={styles.footer}>
+        Instituto Federal de São Paulo
+      </Text>
 
-      {/* Frase descritiva */}
-      <Text style={styles.tagline}>Irrigação Automática Inteligente</Text>
-
-      {/* Loading indicator */}
-      <View style={styles.loadingContainer}>
-        <View style={[styles.loadingBar, { width: '0%' }]} />
-        <Text style={styles.loadingText}>Carregando...</Text>
-      </View>
-
-      {/* Footer */}
-      <Text style={styles.footer}>IFSP Campus Birigui</Text>
-    </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
+
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: SIZES.padding,
   },
-  background: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: COLORS.background,
-  },
+
   logoContainer: {
     marginBottom: 40,
-    alignItems: 'center',
   },
+
   logoCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: COLORS.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    justifyContent: "center",
+    alignItems: "center",
+
+    shadowColor: "#00E0FF",
+    shadowOpacity: 0.6,
+    shadowRadius: 25,
+    elevation: 15,
   },
-  appName: {
+
+  title: {
     fontSize: 36,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    marginBottom: 4,
-    letterSpacing: 1,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: 1.5,
+    textAlign: "center",
   },
-  appSubtitle: {
+
+  subtitle: {
     fontSize: 18,
-    color: COLORS.secondary,
-    marginBottom: 20,
-    fontWeight: '600',
+    fontWeight: "600",
+    color: "#00E0FF",
+    marginTop: 6,
+    textAlign: "center",
   },
+
   tagline: {
     fontSize: 14,
-    color: COLORS.textLight,
-    marginBottom: 60,
-    fontStyle: 'italic',
-    textAlign: 'center',
-  },
-  loadingContainer: {
-    width: '100%',
-    alignItems: 'center',
+    color: "#D6E8EE",
+    marginTop: 14,
+    textAlign: "center",
     marginBottom: 60,
   },
+
+  loadingArea: {
+    width: "100%",
+    alignItems: "center",
+    marginBottom: 80,
+  },
+
+  loadingTrack: {
+    width: "70%",
+    height: 5,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 10,
+    overflow: "hidden",
+    marginBottom: 10,
+  },
+
   loadingBar: {
-    height: 3,
-    backgroundColor: COLORS.primary,
-    borderRadius: 2,
-    marginBottom: 12,
-    width: '60%',
+    height: "100%",
+    backgroundColor: "#00E0FF",
+    borderRadius: 10,
   },
+
   loadingText: {
-    fontSize: 12,
-    color: COLORS.textLight,
-    fontWeight: '500',
+    fontSize: 13,
+    color: "#D6E8EE",
+    fontWeight: "500",
   },
+
   footer: {
-    position: 'absolute',
-    bottom: 20,
+    position: "absolute",
+    bottom: 30,
+    color: "#A7C7D1",
     fontSize: 12,
-    color: COLORS.textLight,
   },
+
 });
 
 export default SplashScreen;

@@ -11,7 +11,7 @@ Aplicativo React Native com Expo para monitoramento e controle automático de si
 - ✅ Configurações avançadas do dispositivo
 - ✅ Navegação por abas (Bottom Tabs)
 - ✅ Design limpo e moderno com tema profissional
-- ✅ Dados simulados (prontos para integração com Firebase + ESP32)
+- ✅ Dados simulados (prontos para integração com ESP32)
 
 ### ✨ Melhorias de Usabilidade (IHC)
 - ✅ **Indicador de Conexão** em todas as telas (real-time status)
@@ -55,7 +55,6 @@ src/
 ├── screens/
 │   ├── HomeScreen.js          # Tela principal (melhorada)
 │   ├── SensoresScreen.js      # Tela de sensores (melhorada)
-│   ├── HistoricoScreen.js     # Tela de histórico (melhorada)
 │   └── ConfigScreen.js        # Tela de configurações (melhorada)
 └── styles/
     └── theme.js               # Design system
@@ -174,29 +173,9 @@ Todas as 10 heurísticas de Nielsen foram implementadas diretamente no código:
 
 Quando o ESP32 estiver disponível:
 
-1. **Firebase Realtime Database**: Substitua dados simulados por dados reais
-2. **Conexão ESP32**: Configure a comunicação via REST API ou WebSocket
-3. **Controle em Tempo Real**: Atualize o status e controle da bomba
-4. **Autenticação**: Implemente login de usuários
-
-### Exemplo de Integração (Firebase)
-
-```javascript
-import { initializeApp } from 'firebase/app';
-import { getDatabase, ref, onValue } from 'firebase/database';
-
-// Configurar Firebase
-const firebaseConfig = { /* suas credenciais */ };
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
-
-// Ler dados em tempo real
-const sensoresRef = ref(database, 'sensores');
-onValue(sensoresRef, (snapshot) => {
-  const data = snapshot.val();
-  // Atualizar estado com dados reais
-});
-```
+1. **Conexão ESP32**: Configure a comunicação via REST API ou WebSocket
+2. **Controle em Tempo Real**: Atualize o status e controle da bomba
+3. **Autenticação**: Implemente login de usuários (opcional)
 
 ## 📝 Notas
 

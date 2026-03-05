@@ -8,7 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS, SIZES, FONTS } from '../styles/theme';
+import { COLORS, SIZES, FONTS, SHADOWS } from '../styles/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -97,42 +97,43 @@ const ConfirmDialog = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: SIZES.md,
   },
   container: {
-    width: width * 0.85,
+    width: '100%',
+    maxWidth: width * 0.88,
     backgroundColor: COLORS.white,
-    borderRadius: SIZES.xl,
-    padding: SIZES.lg,
+    borderRadius: SIZES.borderRadiusExtraLarge,
+    padding: SIZES.xl,
     alignItems: 'center',
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    ...SHADOWS.xl,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: SIZES.md,
+    marginBottom: SIZES.lg,
   },
   title: {
-    ...FONTS.h3,
+    fontSize: SIZES.fontSize.xl,
+    fontWeight: '700',
     color: COLORS.text,
     marginBottom: SIZES.sm,
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
   message: {
-    ...FONTS.body2,
-    color: COLORS.textLight,
-    marginBottom: SIZES.lg,
+    fontSize: SIZES.fontSize.md,
+    color: COLORS.textMuted,
+    marginBottom: SIZES.xl,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 22,
+    fontWeight: '500',
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -141,26 +142,28 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    paddingVertical: SIZES.md,
-    borderRadius: SIZES.md,
+    paddingVertical: SIZES.lg,
+    borderRadius: SIZES.borderRadiusLarge,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: COLORS.border,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    backgroundColor: COLORS.borderLight,
   },
   cancelButtonText: {
-    ...FONTS.button,
     color: COLORS.text,
+    fontSize: SIZES.fontSize.md,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   confirmButton: {
     backgroundColor: COLORS.primary,
   },
   confirmButtonText: {
-    ...FONTS.button,
     color: COLORS.white,
+    fontSize: SIZES.fontSize.md,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 });
 

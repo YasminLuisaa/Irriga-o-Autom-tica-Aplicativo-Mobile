@@ -15,13 +15,7 @@ import { COLORS, SIZES, SHADOWS } from '../styles/theme';
 
 const ProfileScreen = ({ onLogout }) => {
   const [loading, setLoading] = useState(false);
-  
-  // Dados simulados (sem Firebase)
-  const user = {
-    displayName: 'Usuário Local',
-    email: 'usuario@local.app',
-    uid: 'local_user'
-  };
+  const user = null; // Sem autenticação
 
   const handleLogout = () => {
     Alert.alert(
@@ -38,12 +32,13 @@ const ProfileScreen = ({ onLogout }) => {
           onPress: async () => {
             try {
               setLoading(true);
-              setTimeout(() => {
-                showToast('✅ Logout realizado com sucesso!', 'success');
-                onLogout();
-              }, 500);
+              console.log('🔓 Fazendo logout...');
+              console.log('✅ Logout bem-sucedido');
+              showToast('✅ Logout realizado com sucesso!', 'success');
+              onLogout();
             } catch (error) {
-              showToast('❌ Erro ao fazer logout', 'error');
+              console.error('❌ Erro ao fazer logout:', error);
+              showToast('❌ Erro ao fazer logout: ' + error.message, 'error');
             } finally {
               setLoading(false);
             }
@@ -69,12 +64,13 @@ const ProfileScreen = ({ onLogout }) => {
           onPress: async () => {
             try {
               setLoading(true);
-              setTimeout(() => {
-                showToast('✅ Conta deletada com sucesso!', 'success');
-                onLogout();
-              }, 500);
+              console.log('🗑️ Deletando conta...');
+              console.log('✅ Conta deletada');
+              showToast('✅ Conta deletada com sucesso!', 'success');
+              onLogout();
             } catch (error) {
-              showToast('❌ Erro ao deletar conta', 'error');
+              console.error('❌ Erro ao deletar conta:', error);
+              showToast('❌ Erro ao deletar conta: ' + error.message, 'error');
             } finally {
               setLoading(false);
             }

@@ -137,9 +137,3 @@ export const TYPOGRAPHY = {
     lineHeight: 14,
   },
 };
-
-// Fontes
-export const FONTS = {
-  regular: 'Roboto-Regular',
-  bold: 'Roboto-Bold',
-};

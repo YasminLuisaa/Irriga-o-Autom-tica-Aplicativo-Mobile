@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configurar notificações com tratamento de erro
 try {
@@ -10,28 +11,61 @@ try {
       shouldSetBadge: true,
     }),
   });
+  console.log('✅ Notificações locais habilitadas');
 } catch (error) {
-  console.warn('Erro ao configurar handler de notificações:', error.message);
+  console.warn('⚠️ Erro ao configurar handler de notificações:', error.message);
 }
 
-// Registrar push notifications com suporte para SDK 53+
+// Função auxiliar para salvar notificações no histórico
+const salvarNoHistorico = async (titulo, mensagem, tipo) => {
+  try {
+    const dados = await AsyncStorage.getItem('historicoNotificacoes');
+    const historico = dados ? JSON.parse(dados) : [];
+    
+    historico.push({
+      titulo,
+      mensagem,
+      tipo,
+      timestamp: new Date().toISOString(),
+    });
+    
+    // Manter apenas últimas 50 notificações
+    if (historico.length > 50) {
+      historico.shift();
+    }
+    
+    await AsyncStorage.setItem('historicoNotificacoes', JSON.stringify(historico));
+  } catch (error) {
+    console.warn('⚠️ Erro ao salvar notificação no histórico:', error.message);
+  }
+};
+
+// Registrar notificações locais
+// Nota: Este app usa apenas notificações locais (não requer push remoto)
+// Push notifications remotas necessitam de um development build
 export const registrarNotificacoes = async () => {
   try {
-    // Em Expo Go SDK 53+, push notifications remotas não são suportadas
-    // Esta função continuará funcionando mas com limitações
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
+    // Solicitar permissões para notificações locais
+    let finalStatus = 'granted';
+    try {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      } else {
+        finalStatus = existingStatus;
+      }
+    } catch (permError) {
+      console.log('⚠️ Não foi possível solicitar permissões de notificação:', permError.message);
+      finalStatus = 'granted';
     }
 
-    if (finalStatus !== 'granted') {
-      console.log('Permissão de notificação negada');
-      return;
+    if (finalStatus === 'denied') {
+      console.log('⚠️ Permissão de notificação negada');
+      return false;
     }
 
+    // Configurar canal Android
     if (Platform.OS === 'android') {
       try {
         await Notifications.setNotificationChannelAsync('default', {
@@ -40,15 +74,17 @@ export const registrarNotificacoes = async () => {
           vibrationPattern: [0, 250, 250, 250],
           lightColor: '#FF231F7C',
         });
+        console.log('✅ Canal de notificação Android configurado');
       } catch (channelError) {
-        console.log('Erro ao criar canal de notificação (esperado em Expo Go):', channelError.message);
+        console.warn('⚠️ Erro ao configurar canal de notificação:', channelError.message);
       }
     }
 
-    console.log('✅ Notificações registradas');
+    console.log('✅ Notificações locais habilitadas');
+    return true;
   } catch (error) {
-    // Push notifications may not be fully available in Expo Go SDK 53+
-    console.log('⚠️ Limitação de notificações em Expo Go:', error.message);
+    console.warn('⚠️ Erro ao configurar notificações:', error.message);
+    return false;
   }
 };
 

@@ -112,7 +112,7 @@ const SensoresScreen = () => {
               />
             </View>
             <View style={styles.sensorInfo}>
-              <Text style={styles.sensorName}>Sensor 1 - Vaso 1 🌱</Text>
+              <Text style={styles.sensorName}>Sensor 1 🌱</Text>
               <Text 
                 style={[
                   styles.sensorStatus,
@@ -167,7 +167,7 @@ const SensoresScreen = () => {
               />
             </View>
             <View style={styles.sensorInfo}>
-              <Text style={styles.sensorName}>Sensor 2 - Vaso 2 🌱</Text>
+              <Text style={styles.sensorName}>Sensor 2 🌱</Text>
               <Text 
                 style={[
                   styles.sensorStatus,
@@ -222,7 +222,7 @@ const SensoresScreen = () => {
               />
             </View>
             <View style={styles.sensorInfo}>
-              <Text style={styles.sensorName}>Sensor 3 - Vaso 3 🌱</Text>
+              <Text style={styles.sensorName}>Sensor 3 🌱</Text>
               <Text 
                 style={[
                   styles.sensorStatus,

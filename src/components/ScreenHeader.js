@@ -7,9 +7,7 @@ const ScreenHeader = ({ currentScreen, navigation }) => {
   const screens = [
     { name: 'HomeTab', label: 'Home', icon: 'home' },
     { name: 'SensoresTab', label: 'Sensores', icon: 'water' },
-    { name: 'HistoricoTab', label: 'Histórico', icon: 'chart-line' },
-    { name: 'ConfigTab', label: 'Config', icon: 'cog' },
-    { name: 'ProfileTab', label: 'Perfil', icon: 'account' },
+    { name: 'ConfigTab', label: 'Configuração', icon: 'cog' },
   ];
 
   const handleNavigation = (screenName) => {
@@ -81,7 +79,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primaryLight,
   },
   tabLabel: {
-    fontSize: 12,
+    fontSize: 16,
     color: COLORS.textLight,
     fontWeight: '500',
   },

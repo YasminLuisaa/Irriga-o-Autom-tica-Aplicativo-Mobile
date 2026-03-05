@@ -20,8 +20,7 @@ import { COLORS, SIZES, SHADOWS } from '../styles/theme';
 import api from '../services/api';
 import { useApp } from '../contexts/AppContext';
 
-// Firebase desabilitado
-
+// 📱 HomeScreen - Tela principal com dados dos sensores em tempo real
 let notificarSoloSeco, notificarSoloUmido, notificarBombaAcionada;
 try {
   const notificationService = require('../services/notificationService');
@@ -60,7 +59,7 @@ const HomeScreen = ({ navigation }) => {
   // Função para determinar status segundo tabela de referência
   const determinarStatusDetalhado = (percentual) => {
     if (percentual >= 80) return { texto: 'Encharcado', emoji: '💦' };
-    if (percentual >= 60) return { texto: 'Úmido', emoji: '✅' };
+    if (percentual >= 60) return { texto: 'Úmido', emoji: '' };
     if (percentual >= 40) return { texto: 'Quase seco', emoji: '⚠️' };
     if (percentual >= 20) return { texto: 'Seco', emoji: '❌' };
     return { texto: 'Muito seco', emoji: '🔴' };
@@ -75,14 +74,25 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handleToggleBomba = () => {
+    console.log('💧 [DEBUG] Botão da bomba pressionado');
+    console.log('  bombaLigada:', bombaLigada);
+    console.log('  modoAutomatico:', modoAutomatico);
+    console.log('  connectionStatus:', connectionStatus);
     setConfirmVisible(true);
   };
 
   const confirmToggleBomba = async () => {
+    console.log('💧 [DEBUG] Confirmando toggle da bomba');
     setConfirmVisible(false);
     try {
       const novoEstado = !bombaLigada;
+      console.log('📊 Estado anterior:', bombaLigada);
+      console.log('📊 Novo estado:', novoEstado);
+      console.log('📤 Chamando toggleBomba...');
+      
       const sucesso = await toggleBomba(novoEstado);
+      
+      console.log('📊 Resultado do toggleBomba:', sucesso);
       
       if (sucesso) {
         showToast(
@@ -90,12 +100,14 @@ const HomeScreen = ({ navigation }) => {
           novoEstado ? 'success' : 'info',
           3000
         );
-        console.log(`✅ Bomba ${novoEstado ? 'LIGADA' : 'DESLIGADA'}`);
+        console.log(`✅ Toast mostrado: ${novoEstado ? 'LIGADA' : 'DESLIGADA'}`);
       } else {
         showToast('❌ Erro ao controlar bomba', 'error');
+        console.error('❌ toggleBomba retornou false');
       }
     } catch (error) {
-      console.error('Erro:', error);
+      console.error('❌ Erro ao controlar bomba:', error);
+      console.error('📋 Stack:', error.stack);
       showToast('❌ Erro ao controlar bomba', 'error');
     }
   };
@@ -196,35 +208,21 @@ const HomeScreen = ({ navigation }) => {
               color={COLORS.white}
             />
             <Text style={styles.bombaButtonText}>
-              {bombaLigada ? '💧 Desligar bomba' : '💧 Ligar bomba'}
+              {bombaLigada ? ' Desligar bomba' : ' Ligar bomba'}
             </Text>
           </TouchableOpacity>
           <Text style={styles.hint}>
             {bombaLigada
-              ? '✓ A bomba está irrigando o solo'
+              ? ' A bomba está irrigando o solo'
               : '→ Toque para ligar a bomba'}
           </Text>
         </View>
 
         <View style={styles.infoSection}>
-          <Text style={styles.sectionTitle}>Sensores Adicionais</Text>
-          
-          <View style={[styles.infoItem, { ...SHADOWS.light }]}>
-            <View style={[styles.infoIcon, { backgroundColor: COLORS.warningLight }]}>
-              <MaterialCommunityIcons
-                name="thermometer"
-                size={24}
-                color={COLORS.warning}
-              />
-            </View>
-            <View style={styles.infoText}>
-              <Text style={styles.infoLabel}>Temperatura</Text>
-              <Text style={styles.infoValue}>28°C</Text>
-            </View>
-            <Text style={styles.infoStatus}>Normal</Text>
-          </View>
+          <Text style={styles.sectionTitle}>Sensor de Luminosidade</Text>
 
-          <View style={[styles.infoItem, { ...SHADOWS.light }]}>
+          {/* Luminosidade */}
+          <View style={[styles.infoItem, { ...SHADOWS.light, borderLeftColor: COLORS.primary }]}>
             <View style={[styles.infoIcon, { backgroundColor: COLORS.primaryLight }]}>
               <MaterialCommunityIcons
                 name="lightbulb"
@@ -279,16 +277,18 @@ const styles = StyleSheet.create({
   container: {
     paddingBottom: SIZES.lg * 2,
   },
+  
+  // ===== CARD DE UMIDADE (Principal) =====
   card: {
     backgroundColor: COLORS.white,
-    borderRadius: SIZES.borderRadius,
+    borderRadius: SIZES.borderRadiusLarge,
     marginHorizontal: SIZES.md,
     marginVertical: SIZES.md,
     padding: SIZES.lg,
     alignItems: 'center',
   },
   umidadeCard: {
-    borderLeftWidth: 4,
+    borderLeftWidth: 5,
     borderLeftColor: COLORS.primary,
   },
   umidadeContent: {
@@ -300,56 +300,61 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: SIZES.md,
+    marginBottom: SIZES.lg,
   },
   label: {
-    fontSize: SIZES.fontSize.md,
+    fontSize: SIZES.fontSize.sm,
     color: COLORS.textLight,
-    marginBottom: SIZES.sm,
+    marginBottom: SIZES.xs,
     fontWeight: '500',
+    letterSpacing: 0.3,
   },
   valueContainer: {
     flexDirection: 'row',
     alignItems: 'baseline',
+    justifyContent: 'center',
   },
   value: {
-    fontSize: SIZES.fontSize.xxxl,
+    fontSize: 56,
     fontWeight: '700',
     color: COLORS.primary,
-    letterSpacing: -1,
+    letterSpacing: -2,
   },
   valueUnit: {
-    fontSize: SIZES.fontSize.lg,
-    color: COLORS.textLight,
-    marginLeft: SIZES.xs,
+    fontSize: SIZES.fontSize.xl,
+    color: COLORS.textMuted,
+    marginLeft: SIZES.sm,
     fontWeight: '600',
   },
   statusLabel: {
-    fontSize: SIZES.fontSize.md,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: SIZES.fontSize.sm,
+    color: 'rgba(255, 255, 255, 0.85)',
     marginBottom: SIZES.sm,
     fontWeight: '500',
+    letterSpacing: 0.3,
   },
   statusValue: {
-    fontSize: 40,
+    fontSize: 44,
     fontWeight: '700',
     color: COLORS.white,
     letterSpacing: -0.5,
   },
+  
+  // ===== SEÇÃO DE CONTROLE =====
   controlSection: {
     marginHorizontal: SIZES.md,
-    marginVertical: SIZES.md,
+    marginVertical: SIZES.lg,
   },
   controlTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SIZES.md,
-    marginBottom: SIZES.md,
+    marginBottom: SIZES.lg,
   },
   controlTitle: {
     fontSize: SIZES.fontSize.lg,
@@ -369,9 +374,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.warningLight,
     paddingVertical: SIZES.sm,
     paddingHorizontal: SIZES.md,
-    borderRadius: SIZES.borderRadiusSmall,
-    marginBottom: SIZES.md,
+    borderRadius: SIZES.borderRadiusMedium,
+    marginBottom: SIZES.lg,
     gap: SIZES.sm,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.warning,
   },
   modoManualText: {
     fontSize: SIZES.fontSize.sm,
@@ -379,18 +386,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   bombaButton: {
-    borderRadius: SIZES.borderRadius,
-    paddingVertical: SIZES.lg,
-    paddingHorizontal: SIZES.md,
+    borderRadius: SIZES.borderRadiusLarge,
+    paddingVertical: SIZES.lg + SIZES.sm,
+    paddingHorizontal: SIZES.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    ...SHADOWS.medium,
+    ...SHADOWS.large,
+    activeOpacity: 0.8,
   },
   bombaButtonText: {
     color: COLORS.white,
     fontSize: SIZES.fontSize.lg,
     fontWeight: '700',
-    marginTop: SIZES.sm,
+    marginTop: SIZES.md,
     letterSpacing: 0.5,
   },
   hint: {
@@ -399,34 +407,37 @@ const styles = StyleSheet.create({
     fontSize: SIZES.fontSize.sm,
     marginTop: SIZES.md,
     fontWeight: '500',
-    fontStyle: 'italic',
   },
+  
+  // ===== SEÇÃO DE SENSORES =====
   infoSection: {
     marginHorizontal: SIZES.md,
-    marginVertical: SIZES.md,
+    marginVertical: SIZES.lg,
   },
   sectionTitle: {
     fontSize: SIZES.fontSize.lg,
     fontWeight: '700',
     color: COLORS.text,
-    marginBottom: SIZES.md,
+    marginBottom: SIZES.lg,
     letterSpacing: 0.3,
   },
   infoItem: {
     flexDirection: 'row',
     backgroundColor: COLORS.white,
-    borderRadius: SIZES.borderRadiusMedium,
-    padding: SIZES.md,
+    borderRadius: SIZES.borderRadiusLarge,
+    padding: SIZES.lg,
     marginVertical: SIZES.sm,
     alignItems: 'center',
+    borderLeftWidth: 5,
+    ...SHADOWS.light,
   },
   infoIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: SIZES.borderRadiusSmall,
+    width: 56,
+    height: 56,
+    borderRadius: SIZES.borderRadiusMedium,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: SIZES.md,
+    marginRight: SIZES.lg,
   },
   infoText: {
     flex: 1,
@@ -436,14 +447,15 @@ const styles = StyleSheet.create({
     color: COLORS.textLight,
     fontWeight: '500',
     marginBottom: SIZES.xs,
+    letterSpacing: 0.2,
   },
   infoValue: {
-    fontSize: SIZES.fontSize.xl,
+    fontSize: SIZES.fontSize.xxl,
     fontWeight: '700',
     color: COLORS.text,
   },
   infoStatus: {
-    fontSize: SIZES.fontSize.sm,
+    fontSize: SIZES.fontSize.xs,
     color: COLORS.success,
     fontWeight: '600',
     paddingVertical: SIZES.xs,
@@ -451,19 +463,22 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.successLight,
     borderRadius: SIZES.borderRadiusSmall,
   },
+  
+  // ===== FOOTER =====
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.white,
     paddingVertical: SIZES.md,
+    paddingHorizontal: SIZES.lg,
+    gap: SIZES.sm,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    gap: SIZES.sm,
+    backgroundColor: COLORS.surface,
   },
   footerText: {
     fontSize: SIZES.fontSize.sm,
-    color: COLORS.textLight,
+    color: COLORS.textMuted,
     fontWeight: '500',
   },
 });
