@@ -114,14 +114,6 @@ Ou use o aplicativo **Expo Go** no seu telefone e escaneie o código QR exibido.
 - **Novo**: Help modal com 3 seções contextualizadas
 - **Novo**: Info box melhorada com legenda
 
-### 📊 Histórico Screen
-- Gráfico de umidade ao longo do tempo com gradiente
-- Filtros por período (24h, semana, mês)
-- Estatísticas completas (máxima, mínima, média, irrigações)
-- **Novo**: Indicador de conexão
-- **Novo**: Help tooltip nos filtros
-- **Novo**: Help modal explicando interpretação de dados
-
 ### ⚙️ Configurações Screen
 - Nome do dispositivo com validação
 - Modo automático/manual (toggle com feedback)
